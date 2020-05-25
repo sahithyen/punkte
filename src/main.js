@@ -17,7 +17,7 @@ export default function Punkte (container) {
       window.addEventListener('resize', () => this.fitCanvas())
 
       this.ctx.beginPath()
-      this.ctx.rect(20, 20, 150, 100)
+      this.ctx.rect(20, 20, 150, 250)
       this.ctx.stroke()
     },
 
