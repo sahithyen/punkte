@@ -2,6 +2,10 @@ export default function Punkte (container) {
   const punkte = {
     container,
     canvas: null,
+    lastFrame: null,
+    ctx: null,
+    width: null,
+    height: null,
 
     init () {
       // Append canvas
@@ -16,9 +20,27 @@ export default function Punkte (container) {
       this.fitCanvas()
       window.addEventListener('resize', () => this.fitCanvas())
 
+      // request first frame
+      window.requestAnimationFrame(timestamp => this.draw(timestamp))
+    },
+
+    update (delta) {
+    },
+
+    draw (timestamp) {
+      const delta = this.lastFrame ? timestamp - this.lastFrame : 0
+      this.lastFrame = timestamp
+
+      this.update(delta)
+
+      this.ctx.clearRect(0, 0, this.width, this.height)
+
       this.ctx.beginPath()
-      this.ctx.rect(20, 20, 150, 250)
+      this.ctx.rect(this.width - 220, this.height - 220, 200, 200)
+
       this.ctx.stroke()
+
+      window.requestAnimationFrame(timestamp => this.draw(timestamp))
     },
 
     fitCanvas () {
@@ -30,6 +52,9 @@ export default function Punkte (container) {
         this.ctx.backingStorePixelRatio || 1
 
       const ratio = devicePixelRatio / backingStoreRatio
+
+      this.width = window.innerWidth
+      this.height = window.innerHeight
 
       this.canvas.width = window.innerWidth * ratio
       this.canvas.height = window.innerHeight * ratio
