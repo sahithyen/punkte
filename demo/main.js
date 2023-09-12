@@ -1,3 +1,10 @@
-import * as wasm from "punkte";
+import { Punkte } from "punkte";
 
-wasm.greet();
+const punkteCanvas = document.querySelector('.punkte-canvas')
+
+try {
+    const punkte = new Punkte(punkteCanvas)
+    punkte.start()
+} catch (error) {
+    console.log(error)
+}
