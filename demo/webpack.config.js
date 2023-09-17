@@ -8,6 +8,9 @@ module.exports = {
     path: path.resolve(__dirname, "dist"),
     filename: "main.js",
   },
+  devServer: {
+    port: 9000,
+  },
   mode: "development",
   plugins: [
     new CopyWebpackPlugin({ patterns: ['index.html'] })
