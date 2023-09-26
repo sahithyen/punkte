@@ -8,4 +8,9 @@ impl Position {
             self.1 + (to.1 - self.1) * factor,
         )
     }
+
+    pub(crate) fn add_position(&mut self, other: Position) {
+        self.0 += other.0;
+        self.1 += other.1;
+    }
 }

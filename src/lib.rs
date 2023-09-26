@@ -1,4 +1,5 @@
 mod allocator;
+mod config;
 mod position;
 mod punkt;
 mod punkte;

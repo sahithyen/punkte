@@ -11,6 +11,9 @@ module.exports = {
   devServer: {
     port: 9000,
   },
+  watchOptions: {
+    aggregateTimeout: 2000
+  },
   mode: "development",
   plugins: [
     new CopyWebpackPlugin({ patterns: ['index.html'] })

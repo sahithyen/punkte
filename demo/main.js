@@ -2,9 +2,30 @@ import { Punkte } from "punkte";
 
 const punkteCanvas = document.querySelector('.punkte-canvas')
 
-const punkte = new Punkte()
-const pointsBuffer = punkte.get_float32_array()
-const pointsCount = pointsBuffer.length / 2
+const getViewport = () => ({
+    x: punkteCanvas.clientLeft,
+    y: punkteCanvas.clientTop,
+    width: punkteCanvas.clientWidth,
+    height: punkteCanvas.clientHeight
+})
+
+const pointsCount = 1000
+const punkte = new Punkte({
+    count: pointsCount,
+    tremble: {
+        offset: 25,
+        min_time: 800,
+        max_time: 1200
+    },
+    punkt: {
+        min_radius: 1,
+        max_radius: 2.5,
+        min_opacity: 0.2,
+        max_opacity: 1.0
+    }
+}, getViewport())
+const positionsBuffer = punkte.get_positions_buffer()
+const propertiesBuffer = punkte.get_properties_buffer()
 
 // const context = punkteCanvas.getContext('2d')
 
@@ -13,7 +34,7 @@ const pointsCount = pointsBuffer.length / 2
 
 //     context.clearRect(0, 0, 500, 500)
 
-//     for (let index = 0; index < pointsBuffer.length / 2; index++) {
+//     for (let index = 0; index < pointsCount; index++) {
 //         const x = pointsBuffer[index * 2];
 //         const y = pointsBuffer[index * 2 + 1];
 
@@ -28,8 +49,6 @@ const pointsCount = pointsBuffer.length / 2
 // }
 
 // requestAnimationFrame(render)
- 
-const circleResolution = 5;
 
 // Initialize Web GL and get required extensions
 const gl = punkteCanvas.getContext("webgl")
@@ -37,39 +56,53 @@ const instancedArraysExt = gl.getExtension("ANGLE_instanced_arrays");
 
 // Vertex shader
 const vsSource = `
-    attribute float a_edge_index;
+    attribute vec2 a_edge_position;
     attribute vec2 a_position;
-    uniform float u_circle_resolution;
+    attribute vec2 a_properties;
+
     uniform vec2 u_canvas_resolution;
+
+    varying vec2 v_position;
+    varying float v_opacity;
 
     #define PI radians(180.0)
     
     void main() {
-        vec2 c_position;
-        if (a_edge_index < 0.0)
-        {
-            c_position = vec2(0, 0);
-        }
-        else
-        {
-            float u = a_edge_index / u_circle_resolution;
-            float angle = u * PI * 2.0;
-            float radius = 4.0;
-            c_position = vec2(cos(angle), sin(angle)) * radius;
-        }
+        float radius = a_properties[0];
+        v_opacity = a_properties[1];
+        vec2 position = a_position + (a_edge_position * radius);
 
-        vec2 position = a_position + c_position;
         vec2 zero_to_one = position / u_canvas_resolution;
         vec2 zero_to_two = zero_to_one * 2.0;
         vec2 clip_space = zero_to_two - 1.0;
         gl_Position = vec4(clip_space * vec2(1, -1), 0, 1);
+
+        v_position = a_edge_position;
     }
     `;
-    
+
 // Fragment shader
 const fsSource = `
+    precision mediump float;
+
+    varying vec2 v_position;
+    varying float v_opacity;
+
+    float circle(in vec2 st, in float radius) {
+        vec2 dist = st - vec2(0.5);
+        return 1.0 - smoothstep(
+            radius - (radius * 0.01),
+            radius + (radius * 0.01),
+            dot(dist, dist) * 4.0
+            );
+    }
+
     void main() {
-        gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);
+        if (circle((v_position + 1.0) * 0.5, 1.0) < 0.5) {
+            discard;
+        }
+        
+        gl_FragColor = vec4(v_opacity, 0.0, 0.0, 1.0);
     }
     `;
 
@@ -126,29 +159,39 @@ gl.useProgram(program);
 const canvasResolutionUniformLocation = gl.getUniformLocation(program, "u_canvas_resolution")
 gl.uniform2f(canvasResolutionUniformLocation, gl.canvas.width, gl.canvas.height)
 
-// Pass resolution of canvas
-const circleResolutionUniformLocation = gl.getUniformLocation(program, "u_circle_resolution")
-gl.uniform1f(circleResolutionUniformLocation, circleResolution)
+// Create buffer for squares
+const edgePositionsBuffer = new Float32Array(pointsCount * 12)
+for (let i = 0; i < pointsCount; i++) {
+    let o = i * 12
+    const x = 1.0
+    const y = 1.0
 
-// Create buffer of edge indices
-const edgeIndicesBuffer = new Float32Array(pointsCount * circleResolution * 3)
-for (let i = 0; i < edgeIndicesBuffer.length; i++) {
-    const instance_i = i % (circleResolution * 3)
-    const quadrant = Math.floor(instance_i / 3)
-    const vertice = instance_i % 3
-    const edge = instance_i % 3 == 0 ? -1 : quadrant + vertice - 1
-    edgeIndicesBuffer[i] = edge
+    // First triangle (top-left - bottom-right - top-right)
+    edgePositionsBuffer[o] = -x
+    edgePositionsBuffer[o + 1] = -y
+    edgePositionsBuffer[o + 2] = x
+    edgePositionsBuffer[o + 3] = y
+    edgePositionsBuffer[o + 4] = x
+    edgePositionsBuffer[o + 5] = -y
+
+    // Second triangle (top-left - bottom-right - bottom-left)
+    edgePositionsBuffer[o + 6] = -x
+    edgePositionsBuffer[o + 7] = -y
+    edgePositionsBuffer[o + 8] = x
+    edgePositionsBuffer[o + 9] = y
+    edgePositionsBuffer[o + 10] = -x
+    edgePositionsBuffer[o + 11] = y
 }
 
 // Pass buffer of edge indices
 const edgeIndicesGLBuffer = gl.createBuffer()
 gl.bindBuffer(gl.ARRAY_BUFFER, edgeIndicesGLBuffer)
-gl.bufferData(gl.ARRAY_BUFFER, edgeIndicesBuffer, gl.STATIC_DRAW)
-const edgeIndicesAttributeLocation = gl.getAttribLocation(program, "a_edge_index")
-gl.enableVertexAttribArray(edgeIndicesAttributeLocation)
+gl.bufferData(gl.ARRAY_BUFFER, edgePositionsBuffer, gl.STATIC_DRAW)
+const edgePositionAttributeLocation = gl.getAttribLocation(program, "a_edge_position")
+gl.enableVertexAttribArray(edgePositionAttributeLocation)
 gl.vertexAttribPointer(
-    edgeIndicesAttributeLocation,
-    1, // components
+    edgePositionAttributeLocation,
+    2, // components
     gl.FLOAT, // data type
     false, // normalize
     0, // stride
@@ -158,7 +201,7 @@ gl.vertexAttribPointer(
 // Pass buffer of positions
 var pointPositionBuffer = gl.createBuffer()
 gl.bindBuffer(gl.ARRAY_BUFFER, pointPositionBuffer)
-gl.bufferData(gl.ARRAY_BUFFER, pointsBuffer, gl.DYNAMIC_DRAW)
+gl.bufferData(gl.ARRAY_BUFFER, positionsBuffer, gl.STREAM_DRAW)
 const positionAttributeLocation = gl.getAttribLocation(program, "a_position")
 gl.enableVertexAttribArray(positionAttributeLocation)
 gl.vertexAttribPointer(
@@ -169,14 +212,30 @@ gl.vertexAttribPointer(
     0, // stride
     0, // offset
 )
-instancedArraysExt.vertexAttribDivisorANGLE(positionAttributeLocation, circleResolution)
+instancedArraysExt.vertexAttribDivisorANGLE(positionAttributeLocation, 2)
+
+// Pass buffer of properties
+var pointPropertiesBuffer = gl.createBuffer()
+gl.bindBuffer(gl.ARRAY_BUFFER, pointPropertiesBuffer)
+gl.bufferData(gl.ARRAY_BUFFER, propertiesBuffer, gl.STATIC_DRAW)
+const propertiesAttributeLocation = gl.getAttribLocation(program, "a_properties")
+gl.enableVertexAttribArray(propertiesAttributeLocation)
+gl.vertexAttribPointer(
+    propertiesAttributeLocation,
+    2, // components
+    gl.FLOAT, // data type
+    false, // normalize
+    0, // stride
+    0, // offset
+)
+instancedArraysExt.vertexAttribDivisorANGLE(propertiesAttributeLocation, 2)
 
 function render(time) {
     punkte.update(time)
 
     // Update buffer
     gl.bindBuffer(gl.ARRAY_BUFFER, pointPositionBuffer)
-    gl.bufferData(gl.ARRAY_BUFFER, pointsBuffer, gl.DYNAMIC_DRAW)
+    gl.bufferData(gl.ARRAY_BUFFER, positionsBuffer, gl.STREAM_DRAW)
 
     // Clear screen
     gl.clearColor(0, 0, 0, 1.0)
@@ -186,8 +245,8 @@ function render(time) {
     instancedArraysExt.drawArraysInstancedANGLE(
         gl.TRIANGLES,
         0, // Offset
-        pointsCount * circleResolution * 3, // Count of vertices
-        pointsCount * circleResolution, // Count of triangles
+        pointsCount * 2 * 3, // Count of vertices
+        pointsCount * 2, // Count of triangles
     );
 
     requestAnimationFrame(render)

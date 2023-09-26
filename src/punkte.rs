@@ -1,34 +1,43 @@
+use std::{convert::TryInto, rc::Rc};
+
 use js_sys::Float32Array;
-use rand::{rngs::SmallRng, Rng, SeedableRng};
+use rand::{rngs::SmallRng, SeedableRng};
 use wasm_bindgen::prelude::*;
 
-use crate::allocator::PunktAllocator;
+use crate::{allocator::PunktAllocator, config::Config};
 
 #[wasm_bindgen]
 pub struct Punkte {
     last_time: Option<f64>,
     punkt_allocator: PunktAllocator,
-    change_timer: f64,
     rng: SmallRng,
 }
 
 #[wasm_bindgen]
 impl Punkte {
     #[wasm_bindgen(constructor)]
-    pub fn new() -> Punkte {
+    pub fn new(config: JsValue) -> Punkte {
         // https://github.com/rustwasm/console_error_panic_hook#readme
         console_error_panic_hook::set_once();
 
+        let config: Config = config.try_into().expect("Invalid config");
+        let config = Rc::from(config);
+
+        let mut rng = SmallRng::from_entropy();
+
         Self {
             last_time: None,
-            punkt_allocator: PunktAllocator::new(10),
-            change_timer: 1000.0,
-            rng: SmallRng::from_entropy(),
+            punkt_allocator: PunktAllocator::new(config, &mut rng),
+            rng,
         }
     }
 
-    pub fn get_float32_array(&self) -> Float32Array {
-        self.punkt_allocator.get_f32_array()
+    pub fn get_positions_buffer(&self) -> Float32Array {
+        self.punkt_allocator.get_positions_buffer()
+    }
+
+    pub fn get_properties_buffer(&self) -> Float32Array {
+        self.punkt_allocator.get_properties_buffer()
     }
 
     pub fn update(&mut self, time: f64) {
@@ -38,20 +47,6 @@ impl Punkte {
         let delta = time - last_time;
 
         // Update all points
-        self.punkt_allocator.update(delta);
-
-        self.change_timer += delta;
-        if self.change_timer >= 900.0 {
-            self.change_timer = 0.0;
-
-            let punkte = self.punkt_allocator.get_punkte_mut();
-            for punkt in punkte.iter_mut() {
-                let to = crate::position::Position(
-                    self.rng.gen_range(10.0..490.0),
-                    self.rng.gen_range(10.0..490.0),
-                );
-                punkt.travel(to, 1000.0);
-            }
-        }
+        self.punkt_allocator.update(delta, &mut self.rng);
     }
 }
