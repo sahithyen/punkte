@@ -1,10 +1,10 @@
 use std::{convert::TryInto, rc::Rc};
 
 use js_sys::Float32Array;
-use rand::{rngs::SmallRng, SeedableRng};
+use rand::{rngs::SmallRng, Rng, SeedableRng};
 use wasm_bindgen::prelude::*;
 
-use crate::{allocator::PunktAllocator, config::Config};
+use crate::{allocator::PunktAllocator, config::Config, position::Position};
 
 #[wasm_bindgen]
 pub struct Punkte {
@@ -48,5 +48,14 @@ impl Punkte {
 
         // Update all points
         self.punkt_allocator.update(delta, &mut self.rng);
+    }
+
+    pub fn rectangle(&mut self, x: f32, y: f32, width: f32, height: f32) {
+        for punkt in self.punkt_allocator.get_punkte() {
+            let x = self.rng.gen_range(x..(x + width));
+            let y = self.rng.gen_range(y..(y + height));
+
+            punkt.travel(Position(x, y), 1000.0);
+        }
     }
 }

@@ -9,13 +9,13 @@ const getViewport = () => ({
     height: punkteCanvas.clientHeight
 })
 
-const pointsCount = 1000
+const pointsCount = 200
 const punkte = new Punkte({
     count: pointsCount,
     tremble: {
-        offset: 25,
-        min_time: 800,
-        max_time: 1200
+        offset: 10,
+        min_time: 400,
+        max_time: 800
     },
     punkt: {
         min_radius: 1,
@@ -26,6 +26,23 @@ const punkte = new Punkte({
 }, getViewport())
 const positionsBuffer = punkte.get_positions_buffer()
 const propertiesBuffer = punkte.get_properties_buffer()
+
+async function animation() {
+    const rects = [
+        [50, 50, 100, 100],
+        [250, 250, 200, 200],
+        [400, 400, 20, 20]
+    ]
+
+    while (true) {
+        for (const [x, y, w, h] of rects) {
+            await new Promise(r => setTimeout(r, 1000))
+            punkte.rectangle(x, y, w, h)
+        }
+    }
+}
+
+animation()
 
 // const context = punkteCanvas.getContext('2d')
 

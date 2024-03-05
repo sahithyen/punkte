@@ -68,4 +68,8 @@ impl PunktAllocator {
                 punkt.update_buffers(delta, rng, position.try_into().unwrap())
             })
     }
+
+    pub(crate) fn get_punkte(&mut self) -> &mut Vec<Punkt> {
+        self.punkte.as_mut()
+    }
 }
