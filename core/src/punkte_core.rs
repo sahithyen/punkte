@@ -7,20 +7,20 @@ use wasm_bindgen::prelude::*;
 use crate::{allocator::PunktAllocator, config::Config, position::Position};
 
 #[wasm_bindgen]
-pub struct Punkte {
+pub struct PunkteCore {
     last_time: Option<f64>,
     punkt_allocator: PunktAllocator,
     rng: SmallRng,
 }
 
 #[wasm_bindgen]
-impl Punkte {
+impl PunkteCore {
     #[wasm_bindgen(constructor)]
-    pub fn new(config: JsValue) -> Punkte {
+    pub fn new(config: JsValue) -> PunkteCore {
         // https://github.com/rustwasm/console_error_panic_hook#readme
         console_error_panic_hook::set_once();
 
-        let config: Config = config.try_into().expect("Invalid config");
+        let config: Config = config.try_into().expect("Invalid config object");
         let config = Rc::from(config);
 
         let mut rng = SmallRng::from_entropy();

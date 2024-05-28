@@ -1,10 +1,10 @@
 [package]
-name = "punkte"
+name = "punkte-core"
 version = "0.1.0"
 description = "An interactive background animation for the Web written in Rust (WASM)"
 repository = "https://github.com/sahithyen/punkte.git"
 authors = ["Sahithyen Kanaganayagam <mail@sahithyen.com>"]
-license = "MIT"
+license-file = "../LICENSE"
 edition = "2018"
 
 [lib]
@@ -14,17 +14,17 @@ crate-type = ["cdylib", "rlib"]
 default = ["console_error_panic_hook"]
 
 [dependencies]
-wasm-bindgen = "0.2.87"
+wasm-bindgen = "0.2.92"
 console_error_panic_hook = { version = "0.1.7", optional = true }
-gloo = "0.10.0"
-js-sys = "0.3.64"
+gloo = "0.11.0"
+js-sys = "0.3.69"
 rand = { version = "0.8.5", features = ["small_rng"] }
-getrandom = { version = "0.2.10", features = ["js"] }
-either = "1.9.0"
-serde = { version = "1.0.188", features = ["derive"] }
+getrandom = { version = "0.2.15", features = ["js"] }
+either = "1.12.0"
+serde = { version = "1.0.203", features = ["derive"] }
 
 [dependencies.web-sys]
-version = "0.3.64"
+version = "0.3.69"
 features = [
   'console',
   'CanvasRenderingContext2d',
@@ -33,9 +33,6 @@ features = [
   'HtmlCanvasElement',
   'Window',
 ]
-
-[dev-dependencies]
-wasm-bindgen-test = "0.3.37"
 
 [profile.release]
 lto = true
