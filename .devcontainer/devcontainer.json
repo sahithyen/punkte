@@ -10,7 +10,8 @@
 	"customizations": {
 		"vscode": {
 			"extensions": [
-				"dtsvet.vscode-wasm"
+				"dtsvet.vscode-wasm",
+				"bradlc.vscode-tailwindcss"
 			]
 		}
 	}

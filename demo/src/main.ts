@@ -1,3 +1,4 @@
+import './styles.css';
 import { Punkte } from "punkte";
 
 const punkteCanvas = document.getElementById('punkte-canvas')
